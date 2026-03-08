@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: stg_transactions
+    description: Type-cast and renamed transactions from bronze. No business logic.
+    columns:
+      - name: transaction_id
+        tests: [not_null, unique]
+      - name: user_id
+        tests: [not_null]
+      - name: amount
+        tests: [not_null]
+      - name: currency
+        tests:
+          - accepted_values:
+              values: ["USD", "NGN", "GBP", "EUR"]
+      - name: device_type
+        tests:
+          - accepted_values:
+              values: ["mobile", "web", "atm", "pos"]
+      - name: event_at
+        tests: [not_null]

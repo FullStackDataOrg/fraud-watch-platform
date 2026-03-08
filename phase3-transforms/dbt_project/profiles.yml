@@ -1,0 +1,13 @@
+fraud_platform:
+  target: dev
+  outputs:
+    dev:
+      type: trino
+      method: none
+      user: dbt
+      host: "{{ env_var('TRINO_HOST', 'trino') }}"
+      port: 8080
+      database: delta
+      schema: bronze
+      threads: 4
+      http_scheme: http

@@ -1,0 +1,18 @@
+version: 2
+
+sources:
+  - name: bronze
+    database: delta
+    schema: bronze
+    tables:
+      - name: transactions
+        description: Raw transactions from Kafka → Spark bronze writer
+        columns:
+          - name: transaction_id
+            tests: [not_null]
+          - name: user_id
+            tests: [not_null]
+          - name: amount
+            tests: [not_null]
+          - name: event_time
+            tests: [not_null]

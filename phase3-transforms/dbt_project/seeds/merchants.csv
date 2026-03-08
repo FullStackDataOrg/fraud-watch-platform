@@ -1,0 +1,11 @@
+merchant_id,merchant_name,category,risk_tier
+M001,amazon,ecommerce,low
+M002,jumia,ecommerce,medium
+M003,uber,transport,low
+M004,netflix,entertainment,low
+M005,shell,fuel,medium
+M006,binance,crypto,high
+M007,localbitcoins,crypto,high
+M008,walmart,retail,low
+M009,mcdonalds,food,low
+M010,western_union,remittance,high
