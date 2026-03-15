@@ -213,6 +213,8 @@ services:
       - ./phase3-transforms/airflow/dags:/opt/airflow/dags
       - airflow-logs:/opt/airflow/logs
       - ./phase3-transforms/dbt_project:/opt/dbt
+      - ./phase4-ml/serving:/opt/ml
+      - ./phase4-ml/features.py:/opt/ml/features.py
     networks: [serving-net, processing-net]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
@@ -265,7 +267,93 @@ services:
       - ./phase3-transforms/dbt_project:/opt/dbt
     networks: [processing-net, serving-net]
 
+  # ── Phase 4: ML Deployment ────────────────────────────────
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.10.0
+    ports:
+      - "5000:5000"
+    environment:
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      MLFLOW_S3_ENDPOINT_URL: ${MINIO_ENDPOINT}
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --default-artifact-root s3://fraud-platform/mlflow
+    volumes:
+      - mlflow-data:/mlflow
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    networks: [serving-net, processing-net]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks: [serving-net]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  ml-training:
+    build:
+      context: ./phase4-ml
+      dockerfile: training/Dockerfile
+    depends_on:
+      mlflow:
+        condition: service_healthy
+      trino:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      TRINO_HOST: trino
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      MLFLOW_S3_ENDPOINT_URL: ${MINIO_ENDPOINT}
+    networks: [serving-net, processing-net]
+    profiles: ["training"]
+
+  fraud-api:
+    build:
+      context: ./phase4-ml
+      dockerfile: serving/Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      mlflow:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      MLFLOW_S3_ENDPOINT_URL: ${MINIO_ENDPOINT}
+    networks: [serving-net, processing-net]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
 volumes:
   minio-data:
   postgres-data:
   airflow-logs:
+  mlflow-data:

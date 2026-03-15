@@ -2,11 +2,11 @@
     
     
     
-    create table "delta"."bronze"."merchants" ("merchant_id" VARCHAR,"merchant_name" VARCHAR,"category" VARCHAR,"risk_tier" VARCHAR) 
+    create table "delta"."delta"."merchants" ("merchant_id" VARCHAR,"merchant_name" VARCHAR,"category" VARCHAR,"risk_tier" VARCHAR) 
   ;
     -- dbt seed --
     
-          insert into "delta"."bronze"."merchants" ("merchant_id", "merchant_name", "category", "risk_tier") values
+          insert into "delta"."delta"."merchants" ("merchant_id", "merchant_name", "category", "risk_tier") values
           (?,?,?,?),(?,?,?,?),(?,?,?,?),(?,?,?,?),(?,?,?,?),(?,?,?,?),(?,?,?,?),(?,?,?,?),(?,?,?,?),(?,?,?,?)
       
 

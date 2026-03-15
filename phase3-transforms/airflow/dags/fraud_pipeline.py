@@ -74,6 +74,11 @@ print(f'Bronze fresh: last write {age} ago', flush=True)
         bash_command=f"dbt test {DBT_CMD}",
     )
 
+    push_features_to_redis = BashOperator(
+        task_id="push_features_to_redis",
+        bash_command="python /opt/ml/feature_writer.py",
+    )
+
     (
         check_bronze_freshness
         >> dbt_seed
@@ -81,4 +86,5 @@ print(f'Bronze fresh: last write {age} ago', flush=True)
         >> dbt_intermediate
         >> dbt_marts
         >> dbt_test
+        >> push_features_to_redis
     )

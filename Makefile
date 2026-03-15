@@ -42,7 +42,8 @@ phase3-up:
 	docker compose up -d dbt-runner
 
 phase4-up:
-	docker compose up -d mlflow redis ml-training fraud-api
+	docker compose up -d mlflow redis
+	docker compose up -d fraud-api
 
 phase5-up:
 	docker compose up -d prometheus grafana superset
@@ -59,7 +60,29 @@ phase3-test:
 	docker compose run --rm --entrypoint "" dbt-runner \
 		bash -c "dbt test --profiles-dir /opt/dbt --project-dir /opt/dbt"
 
-test: phase1-test phase2-test phase3-test
+phase4-test:
+	pip install -q pytest numpy redis && \
+		PYTHONPATH=phase4-ml:phase4-ml/serving pytest phase4-ml/tests/ -v
+
+ml-train:
+	docker compose run --rm ml-training
+
+predict-test:
+	curl -s -X POST http://localhost:8000/predict \
+		-H "Content-Type: application/json" \
+		-d '{"transaction_id":"test-001","user_id":"U1234","amount":500,"merchant_id":"M001","is_international":false}' \
+		| python3 -m json.tool
+
+mlflow-ui:
+	@echo "MLflow UI: http://localhost:5000"
+
+fraud-api-logs:
+	docker compose logs -f fraud-api
+
+redis-features:
+	docker compose exec redis redis-cli keys "user_features:*" | head -20
+
+test: phase1-test phase2-test phase3-test phase4-test
 
 # ── Kafka helpers ─────────────────────────────────────────
 kafka-topics:

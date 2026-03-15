@@ -9,7 +9,9 @@ USER airflow
 RUN pip install --no-cache-dir \
     dbt-trino==1.7.1 \
     trino==0.327.0 \
-    apache-airflow-providers-trino==4.3.1
+    apache-airflow-providers-trino==4.3.1 \
+    redis==5.0.1 \
+    mlflow==2.10.0
 
 # Init DB, create admin user, then start the all-in-one server
 ENTRYPOINT ["/bin/bash", "-c"]

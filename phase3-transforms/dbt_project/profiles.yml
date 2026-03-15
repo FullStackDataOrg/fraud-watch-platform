@@ -8,6 +8,6 @@ fraud_platform:
       host: "{{ env_var('TRINO_HOST', 'trino') }}"
       port: 8080
       database: delta
-      schema: bronze
+      schema: delta
       threads: 4
       http_scheme: http

@@ -4,7 +4,7 @@
 
 
 with features as (
-    select * from "delta"."bronze_marts"."mart_fraud_features"
+    select * from "delta"."gold"."mart_fraud_features"
 ),
 
 risk as (
