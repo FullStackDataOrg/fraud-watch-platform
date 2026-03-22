@@ -1,34 +1,6 @@
+insert into "delta"."gold"."mart_fraud_features" ("user_id", "tx_count_30d", "avg_amount_30d", "stddev_amount_30d", "max_amount_30d", "unique_devices_30d", "unique_countries_30d", "intl_tx_count_30d", "high_amount_count_30d", "last_tx_at", "feature_updated_at")
+    (
+        select "user_id", "tx_count_30d", "avg_amount_30d", "stddev_amount_30d", "max_amount_30d", "unique_devices_30d", "unique_countries_30d", "intl_tx_count_30d", "high_amount_count_30d", "last_tx_at", "feature_updated_at"
+        from "delta"."gold"."mart_fraud_features__dbt_tmp"
+    )
 
-  
-    
-
-    create table "delta"."gold"."mart_fraud_features"
-      
-      
-    as (
-      -- Gold: user-level features for ML model training and serving.
--- One row per user_id. Refreshed incrementally every 15 min via Airflow.
-
-
-
-with velocity as (
-    select * from "delta"."silver"."int_user_velocity"
-    
-)
-
-select
-    user_id,
-    tx_count_30d,
-    avg_amount_30d,
-    stddev_amount_30d,
-    max_amount_30d,
-    unique_devices_30d,
-    unique_countries_30d,
-    intl_tx_count_30d,
-    high_amount_count_30d,
-    last_tx_at,
-    current_timestamp  as feature_updated_at
-from velocity
-    );
-
-  

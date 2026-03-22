@@ -12,11 +12,7 @@ from trino.dbapi import connect
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-REDIS_HOST  = os.environ["REDIS_HOST"]
-REDIS_PORT  = int(os.environ["REDIS_PORT"])
-REDIS_TTL   = int(os.environ.get("REDIS_FEATURE_TTL", 86400))
-TRINO_HOST  = os.environ.get("TRINO_HOST", "trino")
-KEY_PREFIX  = "user_features:"
+KEY_PREFIX = "user_features:"
 
 FEATURE_COLUMNS = [
     "tx_count_30d", "avg_amount_30d", "stddev_amount_30d", "max_amount_30d",
@@ -25,7 +21,8 @@ FEATURE_COLUMNS = [
 
 
 def fetch_features() -> list[dict]:
-    conn = connect(host=TRINO_HOST, port=8080, user="feature-writer", catalog="delta", schema="gold")
+    trino_host = os.environ.get("TRINO_HOST", "trino")
+    conn = connect(host=trino_host, port=8080, user="feature-writer", catalog="delta", schema="gold")
     cur  = conn.cursor()
     cur.execute(f"SELECT user_id, {', '.join(FEATURE_COLUMNS)} FROM mart_fraud_features")
     cols = [desc[0] for desc in cur.description]
@@ -33,13 +30,18 @@ def fetch_features() -> list[dict]:
 
 
 def push_to_redis(rows: list[dict]) -> int:
-    r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
+    r = redis.Redis(
+        host=os.environ["REDIS_HOST"],
+        port=int(os.environ["REDIS_PORT"]),
+        decode_responses=True,
+    )
+    ttl  = int(os.environ.get("REDIS_FEATURE_TTL", 86400))
     pipe = r.pipeline(transaction=False)
 
     for row in rows:
         user_id = row.pop("user_id")
         payload = {k: (float(v) if v is not None else 0.0) for k, v in row.items()}
-        pipe.setex(f"{KEY_PREFIX}{user_id}", REDIS_TTL, json.dumps(payload))
+        pipe.setex(f"{KEY_PREFIX}{user_id}", ttl, json.dumps(payload))
 
     pipe.execute()
     return len(rows)

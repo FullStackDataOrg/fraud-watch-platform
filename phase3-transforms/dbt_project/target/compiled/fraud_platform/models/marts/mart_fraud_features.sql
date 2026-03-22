@@ -6,6 +6,8 @@
 with velocity as (
     select * from "delta"."silver"."int_user_velocity"
     
+    where last_tx_at > (select max(feature_updated_at) from "delta"."gold"."mart_fraud_features")
+    
 )
 
 select

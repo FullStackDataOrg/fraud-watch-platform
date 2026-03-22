@@ -1,9 +1,10 @@
 .PHONY: up down logs build ps clean test \
         phase1-up phase2-up phase3-up phase4-up phase5-up \
-        phase1-test phase2-test phase3-test \
+        phase1-test phase2-test phase3-test phase4-test phase5-test \
         kafka-topics kafka-lag schema-list producer-logs \
         spark-logs minio-ls bronze-count \
-        trino-query trino-bronze-count airflow-logs dbt-run dbt-test
+        trino-query trino-bronze-count airflow-logs dbt-run dbt-test \
+        grafana-open prometheus-open superset-open metrics-check
 
 # ── Full stack ────────────────────────────────────────────
 up:
@@ -46,11 +47,15 @@ phase4-up:
 	docker compose up -d fraud-api
 
 phase5-up:
-	docker compose up -d prometheus grafana superset
+	docker compose up -d kafka-exporter
+	docker compose up -d prometheus
+	docker compose up -d grafana
+	docker compose up -d superset
 
 # ── Tests ─────────────────────────────────────────────────
 phase1-test:
-	PYTHONDONTWRITEBYTECODE=1 pytest phase1-ingestion/tests/ -v
+	docker compose run --rm --entrypoint "" transaction-producer \
+		bash -c "pip install pytest==7.4.0 -q && pytest tests/ -v"
 
 phase2-test:
 	docker compose run --rm --entrypoint "" spark-streaming \
@@ -82,7 +87,28 @@ fraud-api-logs:
 redis-features:
 	docker compose exec redis redis-cli keys "user_features:*" | head -20
 
-test: phase1-test phase2-test phase3-test phase4-test
+phase5-test:
+	@echo "── Phase 5: health checks ──"
+	curl -sf http://localhost:9090/-/healthy   && echo "Prometheus OK" || echo "Prometheus FAIL"
+	curl -sf http://localhost:3000/api/health  && echo "Grafana OK"    || echo "Grafana FAIL"
+	curl -sf http://localhost:8088/health      && echo "Superset OK"   || echo "Superset FAIL"
+	curl -sf http://localhost:8000/metrics | grep -q "fraud_predictions_total" \
+		&& echo "fraud-api /metrics OK" || echo "fraud-api /metrics FAIL"
+
+test: phase1-test phase2-test phase3-test phase4-test phase5-test
+
+# ── Phase 5 helpers ───────────────────────────────────────
+grafana-open:
+	@echo "Grafana: http://localhost:3000  (admin / admin123)"
+
+prometheus-open:
+	@echo "Prometheus: http://localhost:9090"
+
+superset-open:
+	@echo "Superset: http://localhost:8088  (admin / admin123)"
+
+metrics-check:
+	curl -s http://localhost:8000/metrics | grep "^fraud_" || echo "No fraud_ metrics yet (send a /predict request first)"
 
 # ── Kafka helpers ─────────────────────────────────────────
 kafka-topics:
